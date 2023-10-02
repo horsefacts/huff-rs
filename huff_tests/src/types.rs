@@ -27,6 +27,8 @@ pub enum ReportKind {
     List,
     /// Signals `gen_report` to format the test report as JSON
     JSON,
+    /// Signals `gen_report` to format the test report as HuffTest output
+    HuffTest,
 }
 
 /// Convert a TestStatus variant directly to a colored string for use in the report
@@ -59,6 +61,7 @@ impl From<&Option<String>> for ReportKind {
                 "table" => ReportKind::Table,
                 "list" => ReportKind::List,
                 "json" => ReportKind::JSON,
+                "hufftest" => ReportKind::HuffTest,
                 _ => ReportKind::List,
             }
         } else {

@@ -3,6 +3,11 @@ use comfy_table::{
     modifiers::UTF8_ROUND_CORNERS, presets::UTF8_FULL, Attribute, Cell, Color, ContentArrangement,
     Row, Table,
 };
+use ethers_core::{
+    abi::{decode, ParamType},
+    utils::{hex, parse_bytes32_string},
+};
+use huff_utils::prelude::format_even_bytes;
 use std::time::Instant;
 use yansi::Paint;
 
@@ -73,6 +78,58 @@ pub fn print_test_report(results: Vec<TestResult>, report_kind: ReportKind, star
                         );
                         println!("{} {log}", if i == num_logs { "╰─" } else { "├─" });
                         // ├╌
+                    });
+                }
+            }
+        }
+        ReportKind::HuffTest => {
+            for result in results {
+                println!(
+                    "[{}] {: <15} - {} {: <20}",
+                    String::from(result.status),
+                    result.name,
+                    Paint::yellow("Gas used:"),
+                    result.gas
+                );
+
+                let num_logs = result.logs.len().saturating_sub(1);
+
+                if let Some(return_data) = &result.return_data {
+                    let message = if return_data.starts_with("08c379a0") {
+                        let error_string = hex::decode(return_data.as_bytes()).unwrap();
+                        let decoded = decode(&[ParamType::String], &error_string[4..]).unwrap();
+                        decoded[0].clone().into_string().unwrap()
+                    } else {
+                        String::from("test failed")
+                    };
+                    println!("{} {}", if num_logs == 0 { "╰─" } else { "├─" }, Paint::red(message));
+                }
+
+                if num_logs > 0 {
+                    result.logs.iter().enumerate().for_each(|(i, (_, log))| {
+                        let log_string = if log.starts_with("32d5ab96") {
+                            let message = hex::decode(log[8..].as_bytes()).unwrap();
+                            let mut bytes = [0u8; 32];
+                            for (i, &byte) in message.iter().enumerate().take(32) {
+                                bytes[i] = byte;
+                            }
+                            format!(
+                                "{} {}",
+                                if i == num_logs { "╰─" } else { "├─" },
+                                Paint::cyan(parse_bytes32_string(&bytes).unwrap().to_string())
+                            )
+                        } else {
+                            let trimmed = log.trim_start_matches("0");
+                            let prefix = if i == num_logs { "╰─" } else { "│ " };
+                            let bytes = if trimmed == "" {
+                                String::from("00")
+                            } else {
+                                trimmed.to_string()
+                            };
+                            format!("{} 0x{}", prefix, format_even_bytes(bytes))
+                        };
+
+                        println!("{}", log_string);
                     });
                 }
             }
