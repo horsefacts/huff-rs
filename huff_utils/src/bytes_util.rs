@@ -1,6 +1,12 @@
 use crate::{evm::Opcode, evm_version::EVMVersion};
+use ethers_core::utils::format_bytes32_string;
 use std::num::ParseIntError;
 use tiny_keccak::{Hasher, Keccak};
+
+/// Convert a backtick literal to a `[u8; 32]`
+pub fn backticks_to_bytes32(s: &str) -> [u8; 32] {
+    format_bytes32_string(s).unwrap()
+}
 
 /// Convert a string slice to a `[u8; 32]`
 /// Pads zeros to the left of significant bytes in the `[u8; 32]` slice.

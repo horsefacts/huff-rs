@@ -408,6 +408,7 @@ impl<'a> Lexer<'a> {
                 }
                 // String literals. String literals can also be wrapped by single quotes
                 '"' | '\'' => Ok(self.eat_string_literal()),
+                '`' => Ok(self.eat_backtick_literal()),
                 ch => {
                     tracing::error!(target: "lexer", "UNSUPPORTED TOKEN '{}'", ch);
                     return Err(LexicalError::new(
@@ -514,6 +515,13 @@ impl<'a> Lexer<'a> {
     /// Skips white space. They are not significant in the source language
     fn eat_whitespace(&mut self) -> (String, u32, u32) {
         self.eat_while(None, |ch| ch.is_whitespace())
+    }
+
+    fn eat_backtick_literal(&mut self) -> Token {
+        let (backtick_literal, start_span, end_span) = self.eat_while(None, |ch| ch != '`');
+        let literal_token = TokenKind::Literal(backticks_to_bytes32(&backtick_literal));
+        self.consume(); // Advance past the closing quote
+        literal_token.into_span(start_span, end_span + 1)
     }
 
     fn eat_string_literal(&mut self) -> Token {
